@@ -10,6 +10,19 @@ class Klimatic extends StatefulWidget {
 }
 
 class _KlimaticState extends State<Klimatic> {
+  String _cityEntered;
+
+  Future _goToNextScreen(BuildContext context) async {
+    Map results = await Navigator.of(context)
+        .push(new MaterialPageRoute<Map>(builder: (BuildContext context) {
+      return new ChangeCity();
+    }));
+    if (results != null && results.containsKey('enter')) {
+      _cityEntered = results['enter'];
+//      print("from First Screen" + results['enter'].toString());
+    }
+  }
+
   void showStuff() async {
     Map data = await getWeather(util.appId, util.defaultCity);
     print(data.toString());
@@ -20,10 +33,15 @@ class _KlimaticState extends State<Klimatic> {
     return Scaffold(
       appBar: new AppBar(
         title: new Text('Weather'),
+//        debugShowCheckedModeBanner: false
         centerTitle: true,
         backgroundColor: Colors.red,
         actions: <Widget>[
-          new IconButton(icon: new Icon(Icons.menu), onPressed: showStuff)
+          new IconButton(
+              icon: new Icon(Icons.menu),
+              onPressed: () {
+                _goToNextScreen(context);
+              })
         ],
       ),
       body: new Stack(
@@ -31,7 +49,7 @@ class _KlimaticState extends State<Klimatic> {
           new Center(
             child: new Image.asset(
               'images/rainy.jpg',
-              height: 1000.0,
+              height: 800.0,
               width: 700.0,
               fit: BoxFit.fill,
             ),
@@ -40,8 +58,8 @@ class _KlimaticState extends State<Klimatic> {
             alignment: Alignment.topRight,
             margin: const EdgeInsets.fromLTRB(0.0, 5.9, 14.0, 0.0),
             child: new Text(
-              'Biratnagar',
-              style: cityStle(),
+              '${_cityEntered == null ? util.defaultCity : _cityEntered}',
+              style: cityStyle(),
             ),
           ),
           new Container(
@@ -50,8 +68,8 @@ class _KlimaticState extends State<Klimatic> {
           ),
           //container which will have weather data
           new Container(
-            margin: const EdgeInsets.fromLTRB(30.0, 350.0, 0.0, 0.0),
-            child: updateTempWidget("Kathmandu"),
+            margin: const EdgeInsets.fromLTRB(100.0, 340.0, 0.0, 0.0),
+            child: updateTempWidget(_cityEntered),
           ),
         ],
       ),
@@ -68,7 +86,7 @@ class _KlimaticState extends State<Klimatic> {
 
   Widget updateTempWidget(String city) {
     return new FutureBuilder(
-        future: getWeather(util.appId, city),
+        future: getWeather(util.appId, city == null ? util.defaultCity : city),
         builder: (BuildContext context, AsyncSnapshot<Map> snapshot) {
           //where we get all of the json data, we setup widget etc.
           if (snapshot.hasData) {
@@ -77,31 +95,96 @@ class _KlimaticState extends State<Klimatic> {
               child: new Column(
                 children: <Widget>[
                   new ListTile(
-                    title: new Text(content['main']['temp'].toString(),
-                    style: new TextStyle(
-                      fontStyle: FontStyle.normal,
-                      fontSize: 49.9,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500
+                    title: new Text(
+                      content['main']['temp'].toString() + " C",
+                      style: new TextStyle(
+                          fontStyle: FontStyle.normal,
+                          fontSize: 49.9,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500),
                     ),
+                    subtitle: new ListTile(
+                      title: new Text(
+                        "Humidity: ${content['main']['humidity'].toString()}\n"
+                        "Min: ${content['main']['temp_min'].toString()} C\n"
+                        "Max: ${content['main']['temp_max'].toString()} C",
+                        style:  extraTempData(),
+                      ),
                     ),
                   )
                 ],
               ),
             );
-          }
-          else {
+          } else {
             return new Container();
           }
         });
   }
 }
 
-TextStyle cityStle() {
+class ChangeCity extends StatelessWidget {
+  var _cityFieldController = new TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(
+        backgroundColor: Colors.red,
+        title: new Text('Change City'),
+        centerTitle: true,
+      ),
+      body: new Stack(
+        children: <Widget>[
+          new ListView(
+            children: <Widget>[
+              new Image.asset(
+                'images/snow.jpg',
+                width: 500.0,
+                height: 800.0,
+                fit: BoxFit.fill,
+              ),
+            ],
+          ),
+          new ListView(
+            children: <Widget>[
+              new ListTile(
+                title: new TextField(
+                  decoration: new InputDecoration(
+                    hintText: 'Enter City',
+                  ),
+                  controller: _cityFieldController,
+                  keyboardType: TextInputType.text,
+                ),
+              ),
+              new ListTile(
+                title: new FlatButton(
+                    onPressed: () {
+                      Navigator.pop(
+                          context, {'enter': _cityFieldController.text});
+                    },
+                    color: Colors.redAccent,
+                    textColor: Colors.white,
+                    child: new Text('Get Wather')),
+              )
+            ],
+          )
+        ],
+      ),
+    );
+  }
+}
+
+TextStyle cityStyle() {
   return new TextStyle(
       color: Colors.white, fontSize: 22.9, fontStyle: FontStyle.italic);
 }
-
+TextStyle extraTempData() {
+  return new TextStyle(
+    color: Colors.white,
+    fontSize: 20.0,
+    fontStyle: FontStyle.normal
+  );
+}
 TextStyle tempStyle() {
   return new TextStyle(
       color: Colors.white,
